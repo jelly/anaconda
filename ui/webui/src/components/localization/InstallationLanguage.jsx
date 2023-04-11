@@ -19,18 +19,19 @@ import React from "react";
 import cockpit from "cockpit";
 
 import {
+    Card,
+    CardTitle,
     Form,
     FormGroup,
-    Title,
     Menu,
     MenuList,
     MenuInput,
     MenuItem,
     MenuContent,
-    MenuGroup,
     SearchInput,
-    Divider,
-    Alert,
+    Title,
+    ToggleGroup,
+    ToggleGroupItem,
 } from "@patternfly/react-core";
 
 import { EmptyStatePanel } from "cockpit-components-empty-state.jsx";
@@ -64,6 +65,37 @@ const getLanguageNativeName = lang => lang["native-name"].v;
 const getLocaleId = locale => locale["locale-id"].v;
 const getLocaleNativeName = locale => locale["native-name"].v;
 
+const CommonLocalesGroup = ({ commonLocales, locales, lang, onSelect }) => {
+    const findLocaleWithId = (localeCode) => {
+        for (const locale of locales) {
+            for (const subLocale of locale) {
+                if (getLocaleId(subLocale) === localeCode) {
+                    return subLocale;
+                }
+            }
+        }
+    };
+
+    return (
+        <ToggleGroup aria-label={_("Common language selection")}>
+            {
+                commonLocales.map((locale, index) => {
+                    const localeLang = findLocaleWithId(locale);
+                    const langId = getLocaleId(localeLang);
+                    return (
+                        <ToggleGroupItem
+                          key={`toggle-${index}`}
+                          buttonId={langId}
+                          isSelected={lang === langId}
+                          onChange={(_selected, event) => onSelect(event, event.currentTarget.id)}
+                          text={getLanguageNativeName(localeLang)} />
+                    );
+                })
+            }
+        </ToggleGroup>
+    );
+};
+
 class LanguageSelector extends React.Component {
     constructor (props) {
         super(props);
@@ -73,6 +105,7 @@ class LanguageSelector extends React.Component {
             commonLocales: [],
             search: "",
             lang: "",
+            isSearching: false,
         };
 
         this.updateNativeName = this.updateNativeName.bind(this);
@@ -119,32 +152,10 @@ class LanguageSelector extends React.Component {
 
         const filtered = [];
 
-        // Is set to true when the first instance of a selected item is found.
-        let foundSelected = false;
-        // Returns a locale with a given code.
-        const findLocaleWithId = (localeCode) => {
-            for (const locale of this.state.locales) {
-                for (const subLocale of locale) {
-                    if (getLocaleId(subLocale) === localeCode) {
-                        return subLocale;
-                    }
-                }
-            }
-        };
-
         // Returns a new instance of MenuItem from a given locale and with given prefix in it's key
         // and id.
         const createMenuItem = (locale, prefix) => {
             const isSelected = this.state.lang === getLocaleId(locale);
-
-            // Creating a ref that will be applied to the selected language and cause it to scroll into view.
-            const scrollRef = (isSelected && !foundSelected)
-                ? (ref) => {
-                    if (ref) {
-                        ref.scrollIntoView({ block: "center" });
-                    }
-                }
-                : undefined;
 
             const item = (
                 <MenuItem
@@ -152,41 +163,14 @@ class LanguageSelector extends React.Component {
                   key={prefix + getLocaleId(locale)}
                   isSelected={isSelected}
                   itemId={getLocaleId(locale)}
-                  ref={scrollRef}
                   style={isSelected ? { backgroundColor: "var(--pf-c-menu__list-item--hover--BackgroundColor)" } : undefined}
                 >
                     {getLocaleNativeName(locale)}
                 </MenuItem>
             );
 
-            // Prevent assigning scrollRef twice to languages that are both in common list and the alphabetical list.
-            if (isSelected) {
-                foundSelected = true;
-            }
-
             return item;
         };
-
-        // List common languages.
-        if (!filter) {
-            filtered.push(
-                <>
-                    <MenuGroup
-                      label={_("Common languages")}
-                      id={idPrefix + "-common-languages"}
-                      labelHeadingLevel="h3"
-                      key="group-common-languages"
-                    >
-                        {
-                            this.state.commonLocales.map(locale => {
-                                return createMenuItem(findLocaleWithId(locale), "option-common-");
-                            })
-                        }
-                    </MenuGroup>
-                    <Divider />
-                </>
-            );
-        }
 
         // List alphabetically.
         for (const langLocales of locales) {
@@ -196,14 +180,7 @@ class LanguageSelector extends React.Component {
 
             if (!filter || label.toLowerCase().indexOf(filterLow) !== -1) {
                 filtered.push(
-                    <MenuGroup
-                      label={label}
-                      labelHeadingLevel="h3"
-                      id={idPrefix + "-group-" + getLanguageId(currentLang)}
-                      key={"group-" + getLanguageId(currentLang)}
-                    >
-                        {langLocales.map(locale => createMenuItem(locale, "option-alpha-"))}
-                    </MenuGroup>
+                    ...langLocales.map(locale => createMenuItem(locale, "option-alpha-"))
                 );
             }
         }
@@ -252,46 +229,53 @@ class LanguageSelector extends React.Component {
         const options = this.renderOptions(this.state.search);
 
         return (
-            <Menu
-              id={this.props.idPrefix + "-language-menu"}
-              isScrollable
-              onSelect={handleOnSelect}
-              aria-invalid={!lang}
-              {...(isLoading && { loadingVariant: "spinner" })}
-            >
-                <MenuInput>
-                    <Title
-                      headingLevel="h3"
-                      className="pf-c-menu__group-title"
-                      style={
-                          // HACK This title should look like the ones in PF Menu. Simply adding it's class
-                          // doesn't give it all the attributes.
-                          {
-                              fontSize: "var(--pf-c-menu__group-title--FontSize)",
-                              paddingLeft: "0",
-                              paddingTop: "0",
-                              marginBottom: "0.5em",
-                              fontWeight: "var(--pf-c-menu__group-title--FontWeight)",
-                              fontFamily: "var(--pf-global--FontFamily--sans-serif)",
-                              color: "var(--pf-c-menu__group-title--Color)"
+            <>
+                <CommonLocalesGroup commonLocales={commonLocales} locales={locales} lang={lang} onSelect={handleOnSelect} />
+                <Menu
+                  id={this.props.idPrefix + "-language-menu"}
+                  isScrollable
+                  onSelect={handleOnSelect}
+                  aria-invalid={!lang}
+                  {...(isLoading && { loadingVariant: "spinner" })}
+                >
+                    <MenuInput>
+                        <Title
+                          headingLevel="h3"
+                          className="pf-c-menu__group-title"
+                          style={
+                              // HACK This title should look like the ones in PF Menu. Simply adding it's class
+                              // doesn't give it all the attributes.
+                              {
+                                  fontSize: "var(--pf-c-menu__group-title--FontSize)",
+                                  paddingLeft: "0",
+                                  paddingTop: "0",
+                                  marginBottom: "0.5em",
+                                  fontWeight: "var(--pf-c-menu__group-title--FontWeight)",
+                                  fontFamily: "var(--pf-global--FontFamily--sans-serif)",
+                                  color: "var(--pf-c-menu__group-title--Color)"
+                              }
                           }
-                      }
-                    >
-                        {_("Find a language")}
-                    </Title>
-                    <SearchInput
-                      id={this.props.idPrefix + "-language-search"}
-                      value={this.state.search}
-                      onChange={value => this.setState({ ...this.state, search: value })}
-                      onClear={() => this.setState({ ...this.state, search: "" })}
-                    />
-                </MenuInput>
-                <MenuContent maxMenuHeight="25vh">
-                    <MenuList>
-                        {options}
-                    </MenuList>
-                </MenuContent>
-            </Menu>
+                        >
+                            {_("Search for a language")}
+                        </Title>
+
+                        <SearchInput
+                          id={this.props.idPrefix + "-language-search"}
+                          value={this.state.search}
+                          onChange={value => this.setState({ search: value })}
+                          onClear={() => this.setState({ ...this.state, search: "" })}
+                          onFocus={() => this.setState({ isSearching: true })}
+                          resultsCount={options.length > 1 ? options.length : null}
+                        />
+                    </MenuInput>
+                    <MenuContent maxMenuHeight="25vh">
+                        {this.state.isSearching &&
+                            <MenuList>
+                                {options}
+                            </MenuList>}
+                    </MenuContent>
+                </Menu>
+            </>
         );
     }
 }
@@ -301,25 +285,16 @@ export const InstallationLanguage = ({ idPrefix, setIsFormValid, onAddErrorNotif
     const [nativeName, setNativeName] = React.useState(false);
 
     return (
-        <AnacondaPage title={_("Welcome to the Anaconda installer")}>
-            <Title
-              headingLevel="h3"
-            >
-                {_("Choose a language")}
-            </Title>
+        <AnacondaPage title={_("Language")}>
+            <p>
+                {_("The selected language will be used for both the installation and the installed software.")}
+            </p>
+            {nativeName &&
+                <Card>
+                    <CardTitle>{nativeName}</CardTitle>
+                </Card>}
             <Form>
                 <FormGroup isRequired>
-                    {nativeName && (
-                        <Alert
-                          id="language-alert"
-                          isInline
-                          variant="info"
-                          title={_("Chosen language: ") + `${nativeName}`}
-                        >
-                            {_("The chosen language will be used for installation and in the installed software. " +
-                               "To use a different language, find it in the language list.")}
-                        </Alert>
-                    )}
                     <LanguageSelector
                       id="language-selector"
                       idPrefix={idPrefix}
