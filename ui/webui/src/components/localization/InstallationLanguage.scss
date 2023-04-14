@@ -1,8 +1,11 @@
-#language-alert {
-    margin-bottom: 1.25rem;
-}
+.language-menu-flex {
+	/* FIXME */
+	/* https://www.w3.org/WAI/WCAG21/Understanding/visual-presentation.html */
+	max-width: 80ch;
 
-#installation-language-language-menu {
-    margin-top: 1rem;
-    margin-bottom: 2rem;
+	/* Do not let the language menu expand to the end of the page */
+	.pf-c-menu__content {
+		max-height: 20rem;
+		overflow: auto;
+	}
 }
