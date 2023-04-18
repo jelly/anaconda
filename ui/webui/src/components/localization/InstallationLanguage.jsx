@@ -19,18 +19,19 @@ import React from "react";
 import cockpit from "cockpit";
 
 import {
+    Flex,
     Form,
     FormGroup,
+    DataList,
+    DataListItem,
+    DataListCell,
+    DataListItemRow,
+    DataListItemCells,
+    EmptyState,
+    EmptyStateBody,
+    Radio,
     Title,
-    Menu,
-    MenuList,
-    MenuInput,
-    MenuItem,
-    MenuContent,
-    MenuGroup,
     SearchInput,
-    Divider,
-    Alert,
 } from "@patternfly/react-core";
 
 import { EmptyStatePanel } from "cockpit-components-empty-state.jsx";
@@ -75,7 +76,6 @@ class LanguageSelector extends React.Component {
             lang: "",
         };
 
-        this.updateNativeName = this.updateNativeName.bind(this);
         this.renderOptions = this.renderOptions.bind(this);
     }
 
@@ -107,20 +107,12 @@ class LanguageSelector extends React.Component {
         this.setState({ commonLocales: await getCommonLocales() });
     }
 
-    async updateNativeName (localeData) {
-        localeData = localeData || await getLocaleData({ locale: this.state.lang });
-        this.props.getNativeName(getLocaleNativeName(localeData));
-    }
-
     renderOptions (filter) {
         const { languages, locales } = this.state;
-        const idPrefix = this.props.idPrefix;
         const filterLow = filter.toLowerCase();
 
         const filtered = [];
 
-        // Is set to true when the first instance of a selected item is found.
-        let foundSelected = false;
         // Returns a locale with a given code.
         const findLocaleWithId = (localeCode) => {
             for (const locale of this.state.locales) {
@@ -132,100 +124,7 @@ class LanguageSelector extends React.Component {
             }
         };
 
-        // Returns a new instance of MenuItem from a given locale and with given prefix in it's key
-        // and id.
-        const createMenuItem = (locale, prefix) => {
-            const isSelected = this.state.lang === getLocaleId(locale);
-
-            // Creating a ref that will be applied to the selected language and cause it to scroll into view.
-            const scrollRef = (isSelected && !foundSelected)
-                ? (ref) => {
-                    if (ref) {
-                        ref.scrollIntoView({ block: "center" });
-                    }
-                }
-                : undefined;
-
-            const item = (
-                <MenuItem
-                  id={idPrefix + "-" + prefix + getLocaleId(locale).split(".UTF-8")[0]}
-                  key={prefix + getLocaleId(locale)}
-                  isSelected={isSelected}
-                  itemId={getLocaleId(locale)}
-                  ref={scrollRef}
-                  style={isSelected ? { backgroundColor: "var(--pf-c-menu__list-item--hover--BackgroundColor)" } : undefined}
-                >
-                    {getLocaleNativeName(locale)}
-                </MenuItem>
-            );
-
-            // Prevent assigning scrollRef twice to languages that are both in common list and the alphabetical list.
-            if (isSelected) {
-                foundSelected = true;
-            }
-
-            return item;
-        };
-
-        // List common languages.
-        if (!filter) {
-            filtered.push(
-                <>
-                    <MenuGroup
-                      label={_("Common languages")}
-                      id={idPrefix + "-common-languages"}
-                      labelHeadingLevel="h3"
-                      key="group-common-languages"
-                    >
-                        {
-                            this.state.commonLocales.map(locale => {
-                                return createMenuItem(findLocaleWithId(locale), "option-common-");
-                            })
-                        }
-                    </MenuGroup>
-                    <Divider />
-                </>
-            );
-        }
-
-        // List alphabetically.
-        for (const langLocales of locales) {
-            const currentLang = languages.find(lang => getLanguageId(lang) === getLanguageId(langLocales[0]));
-
-            const label = cockpit.format("$0 ($1)", getLanguageNativeName(currentLang), getLanguageEnglishName(currentLang));
-
-            if (!filter || label.toLowerCase().indexOf(filterLow) !== -1) {
-                filtered.push(
-                    <MenuGroup
-                      label={label}
-                      labelHeadingLevel="h3"
-                      id={idPrefix + "-group-" + getLanguageId(currentLang)}
-                      key={"group-" + getLanguageId(currentLang)}
-                    >
-                        {langLocales.map(locale => createMenuItem(locale, "option-alpha-"))}
-                    </MenuGroup>
-                );
-            }
-        }
-
-        if (this.state.search && filtered.length === 0) {
-            return [
-                <MenuItem
-                  id={idPrefix + "search-no-result"}
-                  isDisabled
-                  key="no-result"
-                >
-                    {_("No results found")}
-                </MenuItem>
-            ];
-        }
-
-        return filtered;
-    }
-
-    render () {
-        const { languages, locales, lang, commonLocales } = this.state;
-        const handleOnSelect = (_event, item) => {
+        const handleOnSelect = item => {
             const { locales } = this.state;
             for (const locale of locales) {
                 for (const localeItem of locale) {
@@ -235,7 +134,6 @@ class LanguageSelector extends React.Component {
                                 .then(() => setLocale({ locale: getLocaleId(localeItem) }))
                                 .catch(this.props.onAddErrorNotification);
                         this.setState({ lang: item });
-                        this.updateNativeName(localeItem);
                         window.location.reload(true);
                         return;
                     }
@@ -243,6 +141,63 @@ class LanguageSelector extends React.Component {
             }
         };
 
+        // Returns a new instance of MenuItem from a given locale and with given prefix in it's key
+        // and id.
+        const createMenuItem = (locale, prefix) => {
+            // id={idPrefix + "-" + prefix + getLocaleId(locale).split(".UTF-8")[0]}
+            // key={prefix + getLocaleId(locale)}
+            // isSelected={isSelected}
+            // itemId={getLocaleId(locale)}
+            // style={isSelected ? { backgroundColor: "var(--pf-c-menu__list-item--hover--BackgroundColor)" } : undefined}
+            // {getLocaleNativeName(locale)}
+            const item = (
+                <DataListItem key={prefix + getLocaleId(locale)}>
+                    <DataListItemRow onClick={() => handleOnSelect(getLocaleId(locale))}>
+                        <DataListItemCells
+                          dataListCells={[
+                              <DataListCell key="primary content">
+                                  <Radio
+                                    id={prefix + getLocaleId(locale)}
+                                    isChecked={this.state.lang === getLocaleId(locale)}
+                                    name={getLocaleId(locale)}
+                                    label={getLocaleNativeName(locale)}
+                                  />
+                              </DataListCell>,
+                          ]}
+                        />
+                    </DataListItemRow>
+                </DataListItem>
+            );
+
+            return item;
+        };
+
+        if (!filter) {
+            const selectedLocale = findLocaleWithId(this.state.lang);
+            filtered.push(createMenuItem(selectedLocale, "option-selected-"));
+        }
+
+        // List common languages.
+        if (!filter) {
+            filtered.push(...this.state.commonLocales.filter(locale => this.state.lang !== locale).map(locale => createMenuItem(findLocaleWithId(locale), "option-common-")));
+        }
+
+        // List alphabetically.
+        for (const langLocales of locales) {
+            const currentLang = languages.find(lang => getLanguageId(lang) === getLanguageId(langLocales[0]));
+
+            const label = cockpit.format("$0 ($1)", getLanguageNativeName(currentLang), getLanguageEnglishName(currentLang));
+
+            if (!filter || label.toLowerCase().indexOf(filterLow) !== -1) {
+                filtered.push(...langLocales.filter(locale => getLocaleId(locale) !== this.state.lang).map(locale => createMenuItem(locale, "option-alpha-")));
+            }
+        }
+
+        return filtered;
+    }
+
+    render () {
+        const { languages, locales, commonLocales } = this.state;
         const isLoading = languages.length === 0 || languages.length !== locales.length || commonLocales.length === 0;
 
         if (isLoading) {
@@ -252,80 +207,45 @@ class LanguageSelector extends React.Component {
         const options = this.renderOptions(this.state.search);
 
         return (
-            <Menu
-              id={this.props.idPrefix + "-language-menu"}
-              isScrollable
-              onSelect={handleOnSelect}
-              aria-invalid={!lang}
-              {...(isLoading && { loadingVariant: "spinner" })}
-            >
-                <MenuInput>
-                    <Title
-                      headingLevel="h3"
-                      className="pf-c-menu__group-title"
-                      style={
-                          // HACK This title should look like the ones in PF Menu. Simply adding it's class
-                          // doesn't give it all the attributes.
-                          {
-                              fontSize: "var(--pf-c-menu__group-title--FontSize)",
-                              paddingLeft: "0",
-                              paddingTop: "0",
-                              marginBottom: "0.5em",
-                              fontWeight: "var(--pf-c-menu__group-title--FontWeight)",
-                              fontFamily: "var(--pf-global--FontFamily--sans-serif)",
-                              color: "var(--pf-c-menu__group-title--Color)"
-                          }
-                      }
-                    >
-                        {_("Find a language")}
-                    </Title>
-                    <SearchInput
-                      id={this.props.idPrefix + "-language-search"}
-                      value={this.state.search}
-                      onChange={(_, value) => this.setState({ search: value })}
-                      onClear={() => this.setState({ search: "" })}
-                    />
-                </MenuInput>
-                <MenuContent maxMenuHeight="25vh">
-                    <MenuList>
+            <Flex direction={{ default: "column" }} className="search-form">
+                <SearchInput
+                  id={this.props.idPrefix + "-language-search"}
+                  value={this.state.search}
+                  onChange={(_, value) => this.setState({ search: value })}
+                  onClear={() => this.setState({ search: "" })}
+                />
+                {this.state.search && options.length === 0 &&
+                    <EmptyState>
+                        <EmptyStateBody>
+                            {_("No results found")}
+                        </EmptyStateBody>
+                    </EmptyState>}
+                {options.length !== 0 &&
+                    <DataList isCompact className="languages-list">
                         {options}
-                    </MenuList>
-                </MenuContent>
-            </Menu>
+                    </DataList>}
+            </Flex>
         );
     }
 }
 LanguageSelector.contextType = AddressContext;
 
 export const InstallationLanguage = ({ idPrefix, setIsFormValid, onAddErrorNotification }) => {
-    const [nativeName, setNativeName] = React.useState(false);
-
     return (
         <AnacondaPage title={_("Welcome to the Anaconda installer")}>
             <Title
               headingLevel="h3"
             >
-                {_("Choose a language")}
+                {_("Language")}
             </Title>
+            <p>{_("The selected language will be used for both the installation and the installed software.")}</p>
             <Form>
                 <FormGroup isRequired>
-                    {nativeName && (
-                        <Alert
-                          id="language-alert"
-                          isInline
-                          variant="info"
-                          title={_("Chosen language: ") + `${nativeName}`}
-                        >
-                            {_("The chosen language will be used for installation and in the installed software. " +
-                               "To use a different language, find it in the language list.")}
-                        </Alert>
-                    )}
                     <LanguageSelector
                       id="language-selector"
                       idPrefix={idPrefix}
                       setIsFormValid={setIsFormValid}
                       onAddErrorNotification={onAddErrorNotification}
-                      getNativeName={setNativeName}
                     />
                 </FormGroup>
             </Form>
