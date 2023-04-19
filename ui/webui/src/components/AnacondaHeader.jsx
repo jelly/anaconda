@@ -20,6 +20,10 @@ import React from "react";
 
 import {
     Flex,
+    FlexItem,
+    Dropdown,
+    DropdownItem,
+    KebabToggle,
     Label,
     PageSection, PageSectionVariants,
     Popover, PopoverPosition,
@@ -30,6 +34,38 @@ import { InfoCircleIcon } from "@patternfly/react-icons";
 const _ = cockpit.gettext;
 
 const prerelease = _("Pre-release");
+
+const GlobalMenu = () => {
+    const [isOpen, setIsOpen] = React.useState(false);
+    const onToggle = isOpen => {
+        setIsOpen(isOpen);
+    };
+    const onFocus = () => {
+        const element = document.getElementById("toggle-kebab");
+        element.focus();
+    };
+    const onSelect = () => {
+        setIsOpen(false);
+        onFocus();
+    };
+    const dropdownItems = [
+        <DropdownItem key="terminal" component="button">
+            {_("Open terminal")}
+        </DropdownItem>,
+        <DropdownItem key="about" component="button">
+            {_("About anaconda")}
+        </DropdownItem>,
+    ];
+    return (
+        <Dropdown
+          position="right"
+          onSelect={onSelect}
+          toggle={<KebabToggle id="toggle-kebab" onToggle={onToggle} />}
+          isOpen={isOpen}
+          isPlain
+          dropdownItems={dropdownItems} />
+    );
+};
 
 export const AnacondaHeader = ({ beta, title }) => {
     const betanag = beta
@@ -67,6 +103,9 @@ export const AnacondaHeader = ({ beta, title }) => {
                     <Text component="h1">{title}</Text>
                 </TextContent>
                 {betanag}
+                <FlexItem align={{ default: "alignRight" }}>
+                    {GlobalMenu()}
+                </FlexItem>
             </Flex>
         </PageSection>
     );
