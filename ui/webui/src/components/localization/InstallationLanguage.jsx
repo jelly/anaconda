@@ -232,7 +232,7 @@ LanguageSelector.contextType = AddressContext;
 
 export const InstallationLanguage = ({ idPrefix, setIsFormValid, onAddErrorNotification }) => {
     return (
-        <AnacondaPage title={_("Welcome to the Anaconda installer")}>
+        <AnacondaPage title={_("Welcome to the Anaconda installer")} className="language-page">
             <Title
               headingLevel="h3"
             >

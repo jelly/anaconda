@@ -1,8 +1,15 @@
 .search-form {
-	max-width: 80ch;
+  max-width: 80ch;
 }
 
 .languages-list {
-	max-height: 200px;
-	overflow: auto;
+  overflow-y: auto;
+  flex-grow: 1;
+  max-height: 300px;
 }
+
+.search-page {
+}
+
+.language-page {
+};
