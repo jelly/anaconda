@@ -36,6 +36,8 @@ import { PayloadsClient } from "../apis/payloads";
 import { readBuildstamp, getIsFinal } from "../helpers/betanag.js";
 import { readConf } from "../helpers/conf.js";
 
+import { WithDialogs } from "dialogs.jsx";
+
 const _ = cockpit.gettext;
 
 export const Application = () => {
@@ -97,47 +99,49 @@ export const Application = () => {
     const title = _("Anaconda installer");
 
     const page = (
-        <Page
-          data-debug={conf.Anaconda.debug}
-          additionalGroupedContent={
-              <AnacondaHeader beta={beta} title={title} />
-          }
-          groupProps={{
-              sticky: "top"
-          }}
-        >
-            {Object.keys(notifications).length > 0 &&
-            <AlertGroup isToast isLiveRegion>
-                {Object.keys(notifications).map(idx => {
-                    const notification = notifications[idx];
-                    const newNotifications = { ...notifications };
-                    delete newNotifications[notification.index];
+        <WithDialogs>
+            <Page
+              data-debug={conf.Anaconda.debug}
+              additionalGroupedContent={
+                  <AnacondaHeader beta={beta} title={title} />
+              }
+              groupProps={{
+                  sticky: "top"
+              }}
+            >
+                {Object.keys(notifications).length > 0 &&
+                <AlertGroup isToast isLiveRegion>
+                    {Object.keys(notifications).map(idx => {
+                        const notification = notifications[idx];
+                        const newNotifications = { ...notifications };
+                        delete newNotifications[notification.index];
 
-                    return (
-                        <Alert
-                          variant={AlertVariant[notification.variant]}
-                          title={notification.title}
-                          actionClose={
-                              <AlertActionCloseButton
-                                title={notifications.title}
-                                onClose={() => setNotifications(newNotifications)}
-                              />
-                          }
-                          key={notification.index}>
-                            {notification.message}
-                        </Alert>
-                    );
-                })}
-            </AlertGroup>}
-            <AddressContext.Provider value={address}>
-                <AnacondaWizard
-                  onAddErrorNotification={onAddErrorNotification}
-                  toggleContextHelp={toggleContextHelp}
-                  title={title}
-                  conf={conf}
-                />
-            </AddressContext.Provider>
-        </Page>
+                        return (
+                            <Alert
+                              variant={AlertVariant[notification.variant]}
+                              title={notification.title}
+                              actionClose={
+                                  <AlertActionCloseButton
+                                    title={notifications.title}
+                                    onClose={() => setNotifications(newNotifications)}
+                                  />
+                              }
+                              key={notification.index}>
+                                {notification.message}
+                            </Alert>
+                        );
+                    })}
+                </AlertGroup>}
+                <AddressContext.Provider value={address}>
+                    <AnacondaWizard
+                      onAddErrorNotification={onAddErrorNotification}
+                      toggleContextHelp={toggleContextHelp}
+                      title={title}
+                      conf={conf}
+                    />
+                </AddressContext.Provider>
+            </Page>
+        </WithDialogs>
     );
 
     return (

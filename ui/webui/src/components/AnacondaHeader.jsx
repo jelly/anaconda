@@ -30,12 +30,16 @@ import {
     TextContent, Text, TextVariants
 } from "@patternfly/react-core";
 import { InfoCircleIcon } from "@patternfly/react-icons";
+import { useDialogs } from "dialogs.jsx";
+
+import { AboutAnacondaModal } from "./AnacondaAboutModal.jsx";
 
 const _ = cockpit.gettext;
 
 const prerelease = _("Pre-release");
 
 const GlobalMenu = () => {
+    const Dialogs = useDialogs();
     const [isOpen, setIsOpen] = React.useState(false);
     const onToggle = isOpen => {
         setIsOpen(isOpen);
@@ -52,7 +56,7 @@ const GlobalMenu = () => {
         <DropdownItem key="terminal" component="button">
             {_("Open terminal")}
         </DropdownItem>,
-        <DropdownItem key="about" component="button">
+        <DropdownItem key="about" component="button" onClick={() => Dialogs.show(<AboutAnacondaModal />)}>
             {_("About anaconda")}
         </DropdownItem>,
     ];
