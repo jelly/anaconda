@@ -33,6 +33,7 @@ import { InfoCircleIcon } from "@patternfly/react-icons";
 import { useDialogs } from "dialogs.jsx";
 
 import { AboutAnacondaModal } from "./AnacondaAboutModal.jsx";
+import AnacondaTerminalModal from "./AnacondaTerminalModal.jsx";
 
 const _ = cockpit.gettext;
 
@@ -53,7 +54,7 @@ const GlobalMenu = () => {
         onFocus();
     };
     const dropdownItems = [
-        <DropdownItem key="terminal" component="button">
+        <DropdownItem key="terminal" component="button" onClick={() => Dialogs.show(<AnacondaTerminalModal />)}>
             {_("Open terminal")}
         </DropdownItem>,
         <DropdownItem key="about" component="button" onClick={() => Dialogs.show(<AboutAnacondaModal />)}>

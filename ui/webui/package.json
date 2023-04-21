@@ -55,6 +55,8 @@
     "@patternfly/react-log-viewer": "^4.51.2",
     "@patternfly/react-table": "^4.75.2",
     "react": "18.2.0",
-    "react-dom": "18.2.0"
+    "react-dom": "18.2.0",
+    "xterm": "^5.1.0",
+    "xterm-addon-canvas": "^0.3.0"
   }
 }
