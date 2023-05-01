@@ -32,3 +32,11 @@ export const helpUseFreeSpace = (
         </Text>
     </TextContent>
 );
+
+export const helpCustomMountPoint = (
+    <TextContent>
+        <Text component={TextVariants.p}>
+            {_("Custom mount point details")}
+        </Text>
+    </TextContent>
+);

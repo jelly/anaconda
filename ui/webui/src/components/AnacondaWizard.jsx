@@ -31,6 +31,7 @@ import {
 
 import { InstallationDestination, applyDefaultStorage } from "./storage/InstallationDestination.jsx";
 import { StorageConfiguration, getScenario } from "./storage/StorageConfiguration.jsx";
+import { CustomMountPoint } from "./storage/CustomMountPoint.jsx";
 import { DiskEncryption, StorageEncryptionState } from "./storage/DiskEncryption.jsx";
 import { InstallationLanguage } from "./localization/InstallationLanguage.jsx";
 import { InstallationProgress } from "./installation/InstallationProgress.jsx";
@@ -67,6 +68,10 @@ export const AnacondaWizard = ({ onAddErrorNotification, toggleContextHelp, titl
                 component: StorageConfiguration,
                 id: "storage-configuration",
                 label: _("Storage configuration")
+            }, {
+                component: CustomMountPoint,
+                id: "custom-mountpoint",
+                label: _("Custom mount point")
             }, {
                 component: DiskEncryption,
                 id: "disk-encryption",

@@ -366,3 +366,33 @@ export const setSelectedDisks = ({ drives }) => {
         ]
     );
 };
+/**
+ * @returns {Promise}           The request of automatic partitioning
+ */
+export const getManualPartitioningRequest = ({ partitioning }) => {
+    return (
+        new StorageClient().client.call(
+            partitioning,
+            "org.freedesktop.DBus.Properties",
+            "Get",
+            [
+                "org.fedoraproject.Anaconda.Modules.Storage.Partitioning.Manual",
+                "Requests",
+            ]
+        )
+                .then(res => res[0].v)
+    );
+};
+
+/**
+ */
+// org.fedoraproject.Anaconda.Modules.Storage  /org/fedoraproject/Anaconda/Modules/Storage/Partitioning/8  org.fedoraproject.Anaconda.Modules.Storage.Partitioning.Manual GatherRequests
+export const gatherRequests = (partitioning) => {
+    console.log(partitioning);
+    return new StorageClient().client.call(
+        partitioning,
+        "org.fedoraproject.Anaconda.Modules.Storage.Partitioning.Manual",
+        "GatherRequests",
+        []
+    );
+};
