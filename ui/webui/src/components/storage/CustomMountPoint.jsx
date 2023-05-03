@@ -19,9 +19,14 @@ import React, { useState, useEffect } from "react";
 
 import {
     Checkbox,
+    Flex,
+    Popover,
+    Select,
+    SelectOption,
+    SelectVariant,
     TextContent,
-    TextInput,
 } from "@patternfly/react-core";
+import { HelpIcon } from "@patternfly/react-icons";
 
 import { ListingTable } from "cockpit-components-table.jsx";
 
@@ -34,40 +39,139 @@ import {
     gatherRequests,
 } from "../../apis/storage.js";
 
+import "./CustomMountPoint.scss";
+
 const _ = cockpit.gettext;
 
+const MountPointSelect = ({ partition, mountpoint, handleOnSelect }) => {
+    const defaultOptions = [
+        { value: "/" },
+        { value: "/boot" },
+        { value: "/home" },
+    ];
+
+    const [isOpen, setIsOpen] = useState(false);
+    // filter selected
+    const options = defaultOptions.filter(val => val.value !== mountpoint);
+    if (mountpoint !== "") {
+        options.push({ value: mountpoint });
+    }
+
+    return (
+        <Select
+          variant={SelectVariant.typeahead}
+          className="mountpoint-select"
+          typeAheadAriaLabel={_("Select a mountpoint")}
+          selections={mountpoint || null}
+          isOpen={isOpen}
+          onToggle={() => setIsOpen(true)}
+          onSelect={(_evt, selection, _) => { setIsOpen(false); handleOnSelect(selection, partition) }}
+          isCreatable
+          shouldResetOnSelect
+        >
+            {options.map((option, index) => (
+                <SelectOption
+                  key={index}
+                  value={option.value}
+                />
+            ))}
+        </Select>
+    );
+};
+
 export const CustomMountPoint = ({ idPrefix, setIsFormValid }) => {
+    // [{ device-spec, format-type, mount-point, reformat }]
     const [requests, setRequests] = useState(null);
+    const [partitioning, setPartitioning] = useState(null);
+
     useEffect(() => {
         if (requests === null) {
             // TODO: don't always create a new partitioning...
+            // Or create this when selecting "storage configuration"
             createPartitioning({ method: "MANUAL" }).then(res => {
                 const partitioning = res[0];
+                setPartitioning(partitioning);
                 console.log(partitioning);
                 return gatherRequests(partitioning);
             })
                     .then(res => {
                         console.log("storage", res[0]);
-                        setRequests(res[0]);
+                        setRequests(res[0].map(row => {
+                            return {
+                                "device-spec": row["device-spec"].v,
+                                "format-type": row["format-type"].v,
+                                "mount-point": row["mount-point"].v,
+                                reformat: row.reformat.v
+                            };
+                        }));
                     })
                     .fail(exc => console.error("exc", exc));
         }
     });
 
+    const handleOnSelect = (selection, device) => {
+        setRequests(prevState => {
+            return prevState.map(row => {
+                if (row["device-spec"] === device) {
+                    // Reset reformat option when changing from /
+                    if (row["mount-point"] === "/" && selection !== row["mount-point"] && row.reformat) {
+                        row.reformat = false;
+                    }
+
+                    // Always reformat the root partition
+                    if (selection === "/") {
+                        row.reformat = true;
+                    }
+
+                    row["mount-point"] = selection;
+                }
+                return row;
+            });
+        });
+    };
+
+    const handleCheckReFormat = (checked, mountpoint) => {
+        setRequests(prevState => {
+            return prevState.map(row => {
+                if (row["device-spec"] === mountpoint) {
+                    row.reformat = checked;
+                }
+                return row;
+            });
+        });
+    };
+
     const renderRow = row => {
+        const isRootMountPoint = row["mount-point"] === "/";
         return {
-            props: { key: row["device-spec"].v },
+            props: { key: row["device-spec"] },
             columns: [
-                { title: row["device-spec"].v },
-                { title: row["format-type"].v },
-                { title: <TextInput value={row["mount-point"].v} type="text" onChange={value => console.log(value)} /> },
-                { title: <Checkbox label="" isChecked={row.reformat.v} onChange={() => console.log("reformat")} id="id1" /> },
+                { title: row["device-spec"] },
+                { title: row["format-type"] },
+                { title: <MountPointSelect partition={row["device-spec"]} mountpoint={row["mount-point"]} handleOnSelect={handleOnSelect} /> },
+                {
+                    title: <Flex>
+                        <Checkbox
+                          label={_("Format")}
+                          isChecked={row.reformat}
+                          isDisabled={isRootMountPoint}
+                          onChange={(checked, _) => handleCheckReFormat(checked, row["device-spec"])}
+                          id={row["device-spec"]}
+                        />
+                        {isRootMountPoint &&
+                            <Popover
+                              bodyContent={_("The root partition is always re-formatted by the installer.")}
+                              showClose={false}>
+                                <HelpIcon />
+                            </Popover>}
+                    </Flex>
+                },
             ],
         };
     };
 
     const columnTitles = [
-        { title: _("Device") },
+        { title: _("Partition") },
         { title: _("Format type") },
         { title: _("Mount point") },
         { title: _("Reformat") },
