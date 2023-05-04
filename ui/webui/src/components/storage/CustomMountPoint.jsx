@@ -18,8 +18,11 @@
 import React, { useState, useEffect } from "react";
 
 import {
+    Alert,
     Checkbox,
     Flex,
+    HelperText,
+    HelperTextItem,
     Popover,
     Select,
     SelectOption,
@@ -35,69 +38,97 @@ import cockpit from "cockpit";
 import { AnacondaPage } from "../AnacondaPage.jsx";
 
 import {
-    createPartitioning,
     gatherRequests,
     setManualPartitioningRequests,
+    findPartitioning,
 } from "../../apis/storage.js";
 
 import "./CustomMountPoint.scss";
 
 const _ = cockpit.gettext;
 
-const MountPointSelect = ({ partition, mountpoint, handleOnSelect }) => {
+const MountPointSelect = ({ partition, requests, mountpoint, handleOnSelect }) => {
+    // TODO: extend?
     const defaultOptions = [
         { value: "/" },
         { value: "/boot" },
         { value: "/home" },
     ];
 
+    const duplicatedMountPoint = mountpoint => {
+        return requests.filter(r => r["mount-point"] === mountpoint).length > 1;
+    };
+
     const [isOpen, setIsOpen] = useState(false);
-    // filter selected
+    // Filter selected
     const options = defaultOptions.filter(val => val.value !== mountpoint);
     if (mountpoint !== "") {
         options.push({ value: mountpoint });
     }
 
     return (
-        <Select
-          variant={SelectVariant.typeahead}
-          className="mountpoint-select"
-          typeAheadAriaLabel={_("Select a mountpoint")}
-          selections={mountpoint || null}
-          isOpen={isOpen}
-          onToggle={() => setIsOpen(true)}
-          onSelect={(_evt, selection, _) => { setIsOpen(false); handleOnSelect(selection, partition) }}
-          isCreatable
-          shouldResetOnSelect
-        >
-            {options.map((option, index) => (
-                <SelectOption
-                  key={index}
-                  value={option.value}
-                />
-            ))}
-        </Select>
+        <Flex direction={{ default: "column" }} spaceItems={{ default: "spaceItemsNone" }}>
+            <Select
+              variant={SelectVariant.typeahead}
+              className="mountpoint-select"
+              typeAheadAriaLabel={_("Select a mountpoint")}
+              selections={mountpoint || null}
+              isOpen={isOpen}
+              onToggle={isOpen => setIsOpen(isOpen)}
+              onSelect={(_evt, selection, _) => { setIsOpen(false); handleOnSelect(selection, partition) }}
+              isCreatable
+              shouldResetOnSelect
+            >
+                {options.map((option, index) => (
+                    <SelectOption
+                      key={index}
+                      value={option.value}
+                    />
+                ))}
+            </Select>
+            {duplicatedMountPoint(mountpoint) &&
+                <HelperText component="ul">
+                    <HelperTextItem variant="error" hasIcon component="li">
+                        {_("Duplicate mount point.")}
+                    </HelperTextItem>
+                </HelperText>}
+        </Flex>
     );
 };
 
-export const CustomMountPoint = ({ idPrefix, setIsFormValid, onAddErrorNotification }) => {
+const MountpointCheckbox = ({ reformat, isRootMountPoint, handleCheckReFormat, partition }) => {
+    return (
+        <Flex>
+            <Checkbox
+              label={_("Format")}
+              isChecked={reformat}
+              isDisabled={isRootMountPoint}
+              onChange={(checked, _) => handleCheckReFormat(checked, partition)}
+              id={partition}
+            />
+            {isRootMountPoint &&
+                <Popover
+                  bodyContent={_("The root partition is always re-formatted by the installer.")}
+                  showClose={false}>
+                    <HelpIcon />
+                </Popover>}
+        </Flex>
+    );
+};
+
+export const CustomMountPoint = ({ idPrefix, setIsFormValid, onAddErrorNotification, toggleContextHelp, stepNotification, isInProgress }) => {
     // [{ device-spec, format-type, mount-point, reformat }]
     const [requests, setRequests] = useState(null);
     const [partitioning, setPartitioning] = useState(null);
 
     useEffect(() => {
         if (requests === null) {
-            // TODO: don't always create a new partitioning...
-            // Or create this when selecting "storage configuration"
-            createPartitioning({ method: "MANUAL" }).then(res => {
-                const partitioning = res[0];
+            findPartitioning({ method: "MANUAL" }).then(([partitioning]) => {
                 setPartitioning(partitioning);
-                console.log(partitioning);
                 return gatherRequests(partitioning);
             })
-                    .then(res => {
-                        console.log("storage", res[0]);
-                        setRequests(res[0].map(row => {
+                    .then(([res]) => {
+                        setRequests(res.map(row => {
                             return {
                                 "device-spec": row["device-spec"].v,
                                 "format-type": row["format-type"].v,
@@ -106,11 +137,11 @@ export const CustomMountPoint = ({ idPrefix, setIsFormValid, onAddErrorNotificat
                             };
                         }));
                     })
-                    .fail(exc => console.error("exc", exc));
+                    .fail(exc => console.error(exc));
         }
     });
 
-    const requestToDbus = requests => {
+    const requestsToDbus = requests => {
         return requests.map(row => {
             return {
                 "device-spec": { t: "s", v: row["device-spec"] },
@@ -140,8 +171,7 @@ export const CustomMountPoint = ({ idPrefix, setIsFormValid, onAddErrorNotificat
                 return row;
             });
         });
-        console.log(requests);
-        setManualPartitioningRequests({ partitioning, requests: requestToDbus(requests) }).catch(onAddErrorNotification);
+        setManualPartitioningRequests({ partitioning, requests: requestsToDbus(requests) }).catch(onAddErrorNotification);
     };
 
     const handleCheckReFormat = (checked, mountpoint) => {
@@ -153,7 +183,7 @@ export const CustomMountPoint = ({ idPrefix, setIsFormValid, onAddErrorNotificat
                 return row;
             });
         });
-        setManualPartitioningRequests({ partitioning, requests: requestToDbus(requests) }).catch(onAddErrorNotification);
+        setManualPartitioningRequests({ partitioning, requests: requestsToDbus(requests) }).catch(onAddErrorNotification);
     };
 
     const renderRow = row => {
@@ -163,24 +193,8 @@ export const CustomMountPoint = ({ idPrefix, setIsFormValid, onAddErrorNotificat
             columns: [
                 { title: row["device-spec"] },
                 { title: row["format-type"] },
-                { title: <MountPointSelect partition={row["device-spec"]} mountpoint={row["mount-point"]} handleOnSelect={handleOnSelect} /> },
-                {
-                    title: <Flex>
-                        <Checkbox
-                          label={_("Format")}
-                          isChecked={row.reformat}
-                          isDisabled={isRootMountPoint}
-                          onChange={(checked, _) => handleCheckReFormat(checked, row["device-spec"])}
-                          id={row["device-spec"]}
-                        />
-                        {isRootMountPoint &&
-                            <Popover
-                              bodyContent={_("The root partition is always re-formatted by the installer.")}
-                              showClose={false}>
-                                <HelpIcon />
-                            </Popover>}
-                    </Flex>
-                },
+                { title: <MountPointSelect requests={requests} partition={row["device-spec"]} mountpoint={row["mount-point"]} handleOnSelect={handleOnSelect} /> },
+                { title: <MountpointCheckbox reformat={row.reformat} isRootMountPoint={isRootMountPoint} partition={row["device-spec"]} handleCheckReFormat={handleCheckReFormat} /> },
             ],
         };
     };
@@ -199,6 +213,12 @@ export const CustomMountPoint = ({ idPrefix, setIsFormValid, onAddErrorNotificat
 
     return (
         <AnacondaPage title={_("Select a custom mount point")}>
+            {stepNotification && (stepNotification.step === "custom-mountpoint") &&
+                <Alert
+                  isInline
+                  title={stepNotification.message}
+                  variant="danger"
+                />}
             <TextContent>
                 {_("Some explainer about how one should partition.")}
             </TextContent>

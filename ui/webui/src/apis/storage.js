@@ -61,6 +61,36 @@ export const createPartitioning = ({ method }) => {
 };
 
 /**
+ * @param {string} method       A partitioning method
+ *
+ * Based on find_partitioning, finds the most recent CreatedPartitioning
+ * https://github.com/rhinstaller/anaconda/blob/f8bba497cbff37c94c8f05b11da3fa951cefcb0b/pyanaconda/ui/lib/storage.py#L59
+ *
+ * @returns {Promise}           Resolves the DBus path to the partitioning
+ */
+export const findPartitioning = ({ method }) => {
+    return new StorageClient().client.call(
+        "/org/fedoraproject/Anaconda/Modules/Storage",
+        "org.freedesktop.DBus.Properties",
+        "Get",
+        [
+            "org.fedoraproject.Anaconda.Modules.Storage",
+            "CreatedPartitioning",
+        ]
+    )
+            .then(([res]) => {
+                if (res.v.length === 0) {
+                    return createPartitioning({ method });
+                } else {
+                    return new Promise((resolve) => {
+                        // Return as list to mimmick createPartitioning
+                        resolve([res.v[res.v.length - 1]]);
+                    });
+                }
+            });
+};
+
+/**
  * @returns {Promise}           Resolves all properties of DiskSelection interface
  */
 export const getAllDiskSelection = () => {

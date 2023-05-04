@@ -145,6 +145,7 @@ const checkUseFreeSpace = async (selectedDisks, requiredSize) => {
 
 // TODO: what checks are required
 const checkCustomMountPoint = async (selectedDisks, requiredSize) => {
+    console.log("selectedDisks", selectedDisks);
     const availability = new AvailabilityState();
     return availability;
 };
@@ -183,8 +184,9 @@ const scenarios = [{
     detail: helpCustomMountPoint,
     check: checkCustomMountPoint,
     default: false,
-    // CLEAR_PARTITIONS_NONE = 2
-    initializationMode: 2,
+    // https://github.com/rhinstaller/anaconda/blob/f8bba497cbff37c94c8f05b11da3fa951cefcb0b/pyanaconda/ui/tui/spokes/storage.py#L506
+    // CLEAR_PARTITIONS_NONE = 0
+    initializationMode: 0,
 }];
 
 export const getScenario = (scenarioId) => {

@@ -38,7 +38,7 @@ import { InstallationProgress } from "./installation/InstallationProgress.jsx";
 import { ReviewConfiguration, ReviewConfigurationConfirmModal } from "./review/ReviewConfiguration.jsx";
 import { exitGui } from "../helpers/exit.js";
 import { usePageLocation } from "hooks";
-import { resetPartitioning } from "../apis/storage.js";
+import { resetPartitioning, findPartitioning, partitioningConfigureWithTask, runStorageTask, applyPartitioning } from "../apis/storage.js";
 
 const _ = cockpit.gettext;
 
@@ -233,6 +233,35 @@ const Footer = ({
             });
         } else if (activeStep.id === "installation-review") {
             setNextWaitsConfirmation(true);
+        } else if (activeStep.id === "custom-mountpoint") {
+            setIsInProgress(true);
+
+            let partitioning;
+            findPartitioning({ method: "MANUAL" }).then(([res]) => {
+                partitioning = res;
+                return partitioningConfigureWithTask({ partitioning });
+            })
+                    .then(tasks => {
+                        runStorageTask({
+                            task: tasks[0],
+                            onSuccess: () => (
+                                applyPartitioning({ partitioning })
+                                        .then(() => {
+                                            onNext();
+                                            // Reset the state after the onNext call. Otherwise,
+                                            // React will try to render the current step again.
+                                            setIsInProgress(false);
+                                            setStepNotification();
+                                        })
+                                        .catch(exc => {
+                                            console.log("applyPartitiong", exc);
+                                            setIsInProgress(false);
+                                            setStepNotification({ step: activeStep.id, ...exc });
+                                        })
+                            ),
+                            onFail: err => console.log(err),
+                        });
+                    });
         } else {
             onNext();
         }

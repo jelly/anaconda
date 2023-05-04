@@ -490,6 +490,8 @@ export const InstallationDestination = ({ idPrefix, setIsFormValid, onAddErrorNo
 // TODO migrate to async
 export const applyDefaultStorage = ({ onFail, onSuccess, encrypt, encryptPassword }) => {
     console.log(`applyDefaultStorage, encrypt: ${encrypt}`);
+    // HACK: custom partitioning should not run this?
+    return;
     let partitioning;
     // CLEAR_PARTITIONS_ALL = 1
     return sleep({ seconds: 2 })
