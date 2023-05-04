@@ -306,6 +306,9 @@ class TestStorageMountPoints(anacondalib.VirtInstallMachineCase):
         s.rescan_disks()
         s.select_disk(disk.split('/')[-1])
 
+        import testlib
+        testlib.sit()
+
     def testMultiDisk(self):
         """
         /boot on ext4 on disk 1
