@@ -37,6 +37,7 @@ import { AnacondaPage } from "../AnacondaPage.jsx";
 import {
     createPartitioning,
     gatherRequests,
+    setManualPartitioningRequests,
 } from "../../apis/storage.js";
 
 import "./CustomMountPoint.scss";
@@ -79,7 +80,7 @@ const MountPointSelect = ({ partition, mountpoint, handleOnSelect }) => {
     );
 };
 
-export const CustomMountPoint = ({ idPrefix, setIsFormValid }) => {
+export const CustomMountPoint = ({ idPrefix, setIsFormValid, onAddErrorNotification }) => {
     // [{ device-spec, format-type, mount-point, reformat }]
     const [requests, setRequests] = useState(null);
     const [partitioning, setPartitioning] = useState(null);
@@ -109,6 +110,17 @@ export const CustomMountPoint = ({ idPrefix, setIsFormValid }) => {
         }
     });
 
+    const requestToDbus = requests => {
+        return requests.map(row => {
+            return {
+                "device-spec": { t: "s", v: row["device-spec"] },
+                "format-type": { t: "s", v: row["format-type"] },
+                "mount-point": { t: "s", v: row["mount-point"] },
+                reformat: { t: "b", v: row.reformat },
+            };
+        });
+    };
+
     const handleOnSelect = (selection, device) => {
         setRequests(prevState => {
             return prevState.map(row => {
@@ -128,6 +140,8 @@ export const CustomMountPoint = ({ idPrefix, setIsFormValid }) => {
                 return row;
             });
         });
+        console.log(requests);
+        setManualPartitioningRequests({ partitioning, requests: requestToDbus(requests) }).catch(onAddErrorNotification);
     };
 
     const handleCheckReFormat = (checked, mountpoint) => {
@@ -139,6 +153,7 @@ export const CustomMountPoint = ({ idPrefix, setIsFormValid }) => {
                 return row;
             });
         });
+        setManualPartitioningRequests({ partitioning, requests: requestToDbus(requests) }).catch(onAddErrorNotification);
     };
 
     const renderRow = row => {

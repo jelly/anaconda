@@ -366,6 +366,24 @@ export const setSelectedDisks = ({ drives }) => {
         ]
     );
 };
+
+// .Requests                                                      property  aa{sv}    0            emits-change writable
+/*
+ * @param {Array.<string>}
+ */
+export const setManualPartitioningRequests = ({ partitioning, requests }) => {
+    return new StorageClient().client.call(
+        partitioning,
+        "org.freedesktop.DBus.Properties",
+        "Set",
+        [
+            "org.fedoraproject.Anaconda.Modules.Storage.Partitioning.Manual",
+            "Requests",
+            cockpit.variant("aa{sv}", requests)
+        ]
+    );
+};
+
 /**
  * @returns {Promise}           The request of automatic partitioning
  */
