@@ -253,13 +253,17 @@ const Footer = ({
                                             setIsInProgress(false);
                                             setStepNotification();
                                         })
-                                        .catch(exc => {
-                                            console.log("applyPartitiong", exc);
+                                        .catch(err => {
+                                            console.log("applyPartitiong", err);
                                             setIsInProgress(false);
-                                            setStepNotification({ step: activeStep.id, ...exc });
+                                            setStepNotification({ step: activeStep.id, ...err });
                                         })
                             ),
-                            onFail: err => console.log(err),
+                            onFail: err => {
+                                console.log("runStorageTask", err);
+                                setIsInProgress(false);
+                                setStepNotification({ step: activeStep.id, ...err });
+                            }
                         });
                     });
         } else {
