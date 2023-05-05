@@ -86,7 +86,7 @@ const MountPointSelect = ({ partition, requests, mountpoint, handleOnSelect }) =
                     />
                 ))}
             </Select>
-            {duplicatedMountPoint(mountpoint) &&
+            {mountpoint !== "" && duplicatedMountPoint(mountpoint) &&
                 <HelperText component="ul">
                     <HelperTextItem variant="error" hasIcon component="li">
                         {_("Duplicate mount point.")}
