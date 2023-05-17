@@ -43,6 +43,16 @@ os.environ["TEST_ALLOW_NOLOGIN"] = "true"
 
 class VirtInstallMachine(VirtMachine):
     http_server = None
+    uefi = False
+
+    def __init__(self, image, networking=None, maintain=False, memory_mb=None, cpus=None,
+                 graphics=False, overlay_dir=None, **args):
+        if 'uefi' in args:
+            self.uefi = True
+            del args['uefi']
+        super().__init__(image, networking=networking, maintain=maintain,
+                                          memory_mb=memory_mb, cpus=cpus, graphics=graphics,
+                                          overlay_dir=overlay_dir, **args)
 
     def _execute(self, cmd):
         return subprocess.check_call(cmd, stderr=subprocess.STDOUT, shell=True)
@@ -75,12 +85,14 @@ class VirtInstallMachine(VirtMachine):
         os.chdir(WEBUI_DIR)
 
         disk_image = self._create_disk_image(15)
+        boot_option = "--boot uefi " if self.uefi else ""
 
         try:
             self._execute(
                 "virt-install "
                 "--connect qemu:///session "
                 "--quiet "
+                f"{boot_option} "
                 f"--name {self.label} "
                 f"--os-variant=detect=on "
                 "--memory 2048 "
@@ -116,9 +128,10 @@ class VirtInstallMachine(VirtMachine):
 
     def kill(self):
         self._execute(f"virsh -q -c qemu:///session destroy {self.label} || true")
+        nvram = "--nvram" if self.uefi else ""
         self._execute(
             f"virsh -q -c qemu:///session undefine "
-            f"--remove-all-storage {self.label} || true"
+            f"--remove-all-storage {nvram} {self.label} || true"
         )
         if self.http_server:
             self.http_server.kill()

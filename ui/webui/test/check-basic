@@ -21,8 +21,10 @@ from installer import Installer
 from testlib import nondestructive, test_main  # pylint: disable=import-error
 
 
-@nondestructive
 class TestBasic(anacondalib.VirtInstallMachineCase):
+    provision = {
+        "machine1": { "uefi": True }
+    }
 
     def testNavigation(self):
         b = self.browser
